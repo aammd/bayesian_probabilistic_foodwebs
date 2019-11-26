@@ -964,7 +964,19 @@
 
 <div class="d-article">
 <h2 id="priors-in-food-webs">Priors in food webs</h2>
-<p>The challenge is to create and define prior information for species interactions in food webs. We are interested in creating probabilistic networks. In probabilistic networks, we capture our uncertainty about the presence of an interaction using probability. Probabilistic networks were developed by Poisot et al (2017) as a means of extending the study of networks beyond the case where interactions are known with certainty.</p>
+<p>The challenge is to create and define prior information for species interactions in food webs. We are interested in creating probabilistic networks. In probabilistic networks, we capture our uncertainty about the presence of an interaction using probability. Probabilistic networks were developed by Poisot et al (2017) as a means of extending the study of networks beyond the case where interactions are defined as 0 and 1.</p>
+<p>Cirtwell et al. suggest a bayesian approach to measuring interactions in probabilistic food webs. This approach forms the basis of what follows here. I want to suggest a way to take these priors and modify them to include all the information we have about our system. It seems to me that a good prior should include what we know about the structure of food webs on average, forbidden links in our system, and (possibly!) differences in abundances among species. Such a prior already carries a great deal of ecological information, even before any observations have been included.</p>
+<p>Once we have a prior, we can add other observations We have several kinds of observation already:</p>
+<ul>
+<li>feeding trials (also called “cafeteria” trials)</li>
+<li>gut contents</li>
+<li>literature</li>
+<li>Expert knowledge</li>
+</ul>
+<h3 id="all-we-have-is-the-prior">All we have is the prior</h3>
+<p>In one sense, all we have is prior information aboue any one bromeliad food web. We can never directly observe the food web happening inside a specific bromeliad, since it occurs for the most part deep in the mud held in the leaf axils. However, using our observations of feeding interactions and also models of the distribution of invertebrates among bromeliads, we should be able to define a prior for the kinds of food webs that <em>might</em> be observed in a plant of a given size.</p>
+<h3 id="conjugate-priors">conjugate priors</h3>
+<p>The approach suggested by Cirtwell et al. is based on <em>conjugate priors</em>. Conjugate priors are a convenient bayesian trick: when the prior is defined as a specific distribution, there is sometimes a likelihood which in turn gives</p>
 <div class="layout-chunk" data-layout="l-body">
 <pre class="r"><code>
 library(tidyverse)</code></pre>

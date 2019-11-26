@@ -46,6 +46,10 @@ In one sense, all we have is prior information aboue any one bromeliad food web.
 We can never directly observe the food web happening inside a specific bromeliad, since it occurs for the most part deep in the mud held in the leaf axils. 
 However, using our observations of feeding interactions and also models of the distribution of invertebrates among bromeliads, we should be able to define a prior for the kinds of food webs that _might_ be observed in a plant of a given size. 
 
+### conjugate priors
+
+The approach suggested by Cirtwell et al. is based on *conjugate priors*. 
+Conjugate priors are a convenient bayesian trick: when the prior is defined as a specific distribution, there is sometimes a likelihood which in turn gives 
 
 
 
