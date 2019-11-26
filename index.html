@@ -49,7 +49,7 @@
   <!--/radix_placeholder_rmarkdown_metadata-->
   
   <script type="text/json" id="radix-resource-manifest">
-  {"type":"character","attributes":{},"value":[]}
+  {"type":"character","attributes":{},"value":["index_files/bowser-1.9.3/bowser.min.js","index_files/distill-2.2.21/template.v2.js","index_files/jquery-1.11.3/jquery.min.js","index_files/webcomponents-2.0.0/webcomponents.js"]}
   </script>
   <!--radix_placeholder_navigation_in_header-->
   <!--/radix_placeholder_navigation_in_header-->
@@ -963,8 +963,133 @@
 </div>
 
 <div class="d-article">
-<p>Distill is a publication format for scientific and technical writing, native to the web.</p>
-<p>Learn more about using Distill for R Markdown at <a href="https://rstudio.github.io/distill" class="uri">https://rstudio.github.io/distill</a>.</p>
+<h2 id="priors-in-food-webs">Priors in food webs</h2>
+<p>The challenge is to create and define prior information for species interactions in food webs. We are interested in creating probabilistic networks. In probabilistic networks, we capture our uncertainty about the presence of an interaction using probability. Probabilistic networks were developed by Poisot et al (2017) as a means of extending the study of networks beyond the case where interactions are known with certainty.</p>
+<div class="layout-chunk" data-layout="l-body">
+<pre class="r"><code>
+library(tidyverse)</code></pre>
+</div>
+<div class="layout-chunk" data-layout="l-body">
+<pre class="r"><code>
+forbids &lt;- matrix(
+  c(0,0,0,0,0,
+    1,1,0,0,0,
+    1,1,1,0,0,
+    0,1,1,1,0,
+    0,1,1,1,1),
+  ncol = 5,
+  byrow = TRUE)
+
+abds &lt;- c(250, 170, 70, 35, 5)
+
+m_s &lt;- function(S) (S-1)/S^2
+
+Co_forbid &lt;- function(S, f, p = 0.1){
+  (m_s(S) + p * (1 - m_s(S))) / (1 - f * (1 - m_s(S)))
+}
+
+# make species names
+spnames &lt;- paste0(&quot;sp&quot;, 1:5)
+
+names(abds) &lt;- spnames
+
+# pL , the probability of a link, is equal to connectance at the beginning:
+
+five_sp &lt;- expand_grid(from = spnames,
+            to = spnames) %&gt;% 
+  mutate(pL = m_s(5) + 0.1*(1-m_s(5)))
+
+
+plot_simple_graph &lt;- function(df) df %&gt;% 
+  graph_from_data_frame %&gt;% 
+  ggraph +
+  # geom_edge_link(aes(alpha = pL)) +
+  geom_edge_fan(aes(alpha = pL), show.legend = FALSE) + 
+  geom_node_point() + 
+  theme_void() + 
+  scale_alpha_continuous(limits = c(0.01, 1))
+
+five_sp %&gt;% 
+  plot_simple_graph
+
+# remove forbidden links
+dimnames(forbids) &lt;- list(spnames, spnames)
+
+possible_links_long &lt;- forbids %&gt;% 
+  as.data.frame %&gt;% 
+  rownames_to_column(var = &quot;from&quot;) %&gt;% 
+  pivot_longer(starts_with(&quot;sp&quot;), names_to = &quot;to&quot;) %&gt;% 
+  filter(value&gt;0)
+
+new_pL &lt;- Co_forbid(S = 5, f = sum(forbids==0) / (5^2 - (5 - 1)), p = 0.1)
+
+five_sp_forbid &lt;- five_sp %&gt;% 
+  semi_join(possible_links_long) %&gt;% 
+  mutate(pL = new_pL)
+
+five_sp_forbid %&gt;% 
+  plot_simple_graph
+
+# note this appears lighter because there is no &quot;back&quot; links
+
+# now include abundance information
+
+## again, I have no idea if I am doing this right -- is an adjacenty matrix _from_ predators _to_ prey
+
+
+five_sp_abds &lt;- five_sp_forbid %&gt;% 
+  mutate(abds = abds[to])
+
+five_sp_abd_graph &lt;- five_sp_abds %&gt;% 
+  group_by(from) %&gt;% 
+  mutate(mean_abd = mean(abds),
+         sum_abd = sum(abds),
+         pL = pL * (1 + (abds- mean_abd)/sum_abd))
+
+five_sp_abd_graph %&gt;% 
+  plot_simple_graph() + 
+  geom_node_point(aes(size = sqrt(abds)))
+
+# derive connectance from p
+
+co = m_s(5) + 0.1*(1-m_s(5))
+
+# expected number of links
+co * 5^2
+# or just sum up all probabilites of links:
+sum(five_sp$pL)
+
+## among forbidden links, the sum of all link probabilities is the same number:
+five_sp_forbid$pL %&gt;% sum
+
+## likewise with abundance information, it is the same number: 
+sum(five_sp_abd_graph$pL)
+
+
+
+# including missing species -----------------------------------------------
+
+## okay so the smoothing expressions above can&#39;t deal with species that are not
+## there at all (ie an abundance of 0). So it seems that the right way to do
+## that is to include them in forbidden links:
+
+abds_missing &lt;- c(250, 160, 50, 7, 0)
+
+ra &lt;- abds_missing / sum(abds_missing)
+
+could_happens &lt;- (ra %o% ra) * forbids
+
+sum(could_happens == 0 )
+sum(forbids == 0)
+
+#&#39; so there would need to be a step like this every time we create posterior predictions for the community, based on their abudncaesc. 
+#&#39; 
+#&#39; 1. we predict abundances
+#&#39; 
+#&#39; 2. we combine this with forbidden links to get the number of links that *could* happen
+#&#39; 
+#&#39; 3. we carry on, spreading probability out over all the links in proportion to their abundances (or not).</code></pre>
+</div>
 <!--radix_placeholder_article_footer-->
 <!--/radix_placeholder_article_footer-->
 </div>

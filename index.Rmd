@@ -14,14 +14,171 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Distill is a publication format for scientific and technical writing, native to the web. 
 
-Learn more about using Distill for R Markdown at <https://rstudio.github.io/distill>.
+## Priors in food webs
+
+The challenge is to create and define prior information for species interactions in food webs.
+We are interested in creating probabilistic networks.
+In probabilistic networks, we capture our uncertainty about the presence of an interaction using probability. 
+Probabilistic networks were developed by Poisot et al (2017) as a means of extending the study of networks beyond the case where interactions 
+are defined as 0 and 1.
+
+Cirtwell et al. suggest a bayesian approach to measuring interactions in probabilistic food webs. 
+This approach forms the basis of what follows here. 
+I want to suggest a way to take these priors and modify them to include all the information we have about our system.
+It seems to me that a good prior should include what we know about the structure of food webs on average, forbidden links in our system, and (possibly!) differences in abundances among species. 
+Such a prior already carries a great deal of ecological information, even before any observations have been included.
+
+Once we have a prior, we can add other observations
+We have several kinds of observation already:
+
+* feeding trials (also called "cafeteria" trials)
+* gut contents
+* literature
+* Expert knowledge
+
+### All we have is the prior
+
+In one sense, all we have is prior information aboue any one bromeliad food web. 
+We can never directly observe the food web happening inside a specific bromeliad, since it occurs for the most part deep in the mud held in the leaf axils. 
+However, using our observations of feeding interactions and also models of the distribution of invertebrates among bromeliads, we should be able to define a prior for the kinds of food webs that _might_ be observed in a plant of a given size. 
 
 
+
+
+
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+
+
+```{r, eval=FALSE}
+
+
+forbids <- matrix(
+  c(0,0,0,0,0,
+    1,1,0,0,0,
+    1,1,1,0,0,
+    0,1,1,1,0,
+    0,1,1,1,1),
+  ncol = 5,
+  byrow = TRUE)
+
+abds <- c(250, 170, 70, 35, 5)
+
+m_s <- function(S) (S-1)/S^2
+
+Co_forbid <- function(S, f, p = 0.1){
+  (m_s(S) + p * (1 - m_s(S))) / (1 - f * (1 - m_s(S)))
+}
+
+# make species names
+spnames <- paste0("sp", 1:5)
+
+names(abds) <- spnames
+
+# pL , the probability of a link, is equal to connectance at the beginning:
+
+five_sp <- expand_grid(from = spnames,
+            to = spnames) %>% 
+  mutate(pL = m_s(5) + 0.1*(1-m_s(5)))
+
+
+plot_simple_graph <- function(df) df %>% 
+  graph_from_data_frame %>% 
+  ggraph +
+  # geom_edge_link(aes(alpha = pL)) +
+  geom_edge_fan(aes(alpha = pL), show.legend = FALSE) + 
+  geom_node_point() + 
+  theme_void() + 
+  scale_alpha_continuous(limits = c(0.01, 1))
+
+five_sp %>% 
+  plot_simple_graph
+
+# remove forbidden links
+dimnames(forbids) <- list(spnames, spnames)
+
+possible_links_long <- forbids %>% 
+  as.data.frame %>% 
+  rownames_to_column(var = "from") %>% 
+  pivot_longer(starts_with("sp"), names_to = "to") %>% 
+  filter(value>0)
+
+new_pL <- Co_forbid(S = 5, f = sum(forbids==0) / (5^2 - (5 - 1)), p = 0.1)
+
+five_sp_forbid <- five_sp %>% 
+  semi_join(possible_links_long) %>% 
+  mutate(pL = new_pL)
+
+five_sp_forbid %>% 
+  plot_simple_graph
+
+# note this appears lighter because there is no "back" links
+
+# now include abundance information
+
+## again, I have no idea if I am doing this right -- is an adjacenty matrix _from_ predators _to_ prey
+
+
+five_sp_abds <- five_sp_forbid %>% 
+  mutate(abds = abds[to])
+
+five_sp_abd_graph <- five_sp_abds %>% 
+  group_by(from) %>% 
+  mutate(mean_abd = mean(abds),
+         sum_abd = sum(abds),
+         pL = pL * (1 + (abds- mean_abd)/sum_abd))
+
+five_sp_abd_graph %>% 
+  plot_simple_graph() + 
+  geom_node_point(aes(size = sqrt(abds)))
+
+# derive connectance from p
+
+co = m_s(5) + 0.1*(1-m_s(5))
+
+# expected number of links
+co * 5^2
+# or just sum up all probabilites of links:
+sum(five_sp$pL)
+
+## among forbidden links, the sum of all link probabilities is the same number:
+five_sp_forbid$pL %>% sum
+
+## likewise with abundance information, it is the same number: 
+sum(five_sp_abd_graph$pL)
+
+
+
+# including missing species -----------------------------------------------
+
+## okay so the smoothing expressions above can't deal with species that are not
+## there at all (ie an abundance of 0). So it seems that the right way to do
+## that is to include them in forbidden links:
+
+abds_missing <- c(250, 160, 50, 7, 0)
+
+ra <- abds_missing / sum(abds_missing)
+
+could_happens <- (ra %o% ra) * forbids
+
+sum(could_happens == 0 )
+sum(forbids == 0)
+
+#' so there would need to be a step like this every time we create posterior predictions for the community, based on their abudncaesc. 
+#' 
+#' 1. we predict abundances
+#' 
+#' 2. we combine this with forbidden links to get the number of links that *could* happen
+#' 
+#' 3. we carry on, spreading probability out over all the links in proportion to their abundances (or not).
+```
 
 
 
