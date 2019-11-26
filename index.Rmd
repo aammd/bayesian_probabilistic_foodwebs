@@ -1,0 +1,27 @@
+---
+title: "Bayesian approaches to building probabilistic networks"
+description: |
+  An extension of some existing approaches in network ecology.
+author:
+  - name: Andrew MacDonald 
+    url: 
+    affiliation: U de Montreal, CESAB
+    affiliation_url: 
+date: "`r Sys.Date()`"
+output:
+  distill::distill_article:
+    self_contained: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+Distill is a publication format for scientific and technical writing, native to the web. 
+
+Learn more about using Distill for R Markdown at <https://rstudio.github.io/distill>.
+
+
+
+
+
