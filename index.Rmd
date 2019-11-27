@@ -163,8 +163,10 @@ sum(xx - mean(xx))
 First, in order to calculate the connectance of a food web, we need to know the species richness. 
 This will let us calculate the expected connectance of the food web. Specifically, it gives us information about the minimum proportion of interactions which are necessary ($m(S)$). 
 
-```{r, eval=FALSE}
 
+## Worked example 
+
+```{r, eval=FALSE}
 
 forbids <- matrix(
   c(0,0,0,0,0,
@@ -289,6 +291,19 @@ sum(forbids == 0)
 
 Based on a conversation with Tim, I now think it makes sense to use information on the predator abundances as well to make these spread-out connections. how exactly. 
 
+what's the average of a simplex
+
+```{r}
+
+n <- 20
+ns <- round(exp(rnorm(n,2)))
+
+sim_n <- ns/sum(ns)
+
+1/n
+mean(sim_n)
+
+```
 
 
 
