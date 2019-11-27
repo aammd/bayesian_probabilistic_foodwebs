@@ -71,13 +71,20 @@ f &= \frac{F}{S^2 - (S - 1)}
 \end{align}
 $$
 
-I decided to write $m(S)$ as a function of $S$ because it is the same for all communities with the same richness. on the other hand, $F$ will be different for every single community, even if their species richnesses are the same, because every community will have a different number of forbidden links. 
-
 Where the following values come directly from the data itself
 
 * $F$ is the number of links which are forbidden in the food web
 * $S$ is the number of species present
 * $q_{ij}$ is the relative abundance of an interaction: it is the product of the relative abundances of both species in an interaction.
+
+and there are two *parameters* that come from elsewhere:
+
+* $\alpha$ needs to be guessed at
+* $p$ is the proportion of "flexible" links which are realized. 
+
+#### comments
+
+I decided to write $m(S)$ as a function of $S$ because it is the same for all communities with the same richness. on the other hand, $F$ will be different for every single community, even if their species richnesses are the same, because every community will have a different number of forbidden links. 
 
 $q_{ij}$ do _not_ sum to one, because these are the products of relative abundances of species which might interact -- they do not include forbidden links. For example if a predator is a carnivore and cannot digest plant matter, no plants are included in the possible resources for this species.
 
@@ -93,7 +100,58 @@ An eco-evolutionary interpretation of this is that organisms adapt to eat those 
 Alternatively, this relationship might even be negative. In such a case, we might imagine that more common species are common precisely _because_ they do not interact with the predator -- i.e. they dont' get killed as often. We might set a different (and /or rather wide) prior on this value and marginalize our results over it. 
 One possible value might be $N(1,1)$
 
-*parameters* $\alpha$ needs to be guessed at. $p$ can be the posterior distribution from the straight lines paper.
+$\alpha$ also has a maximum and minimum magnitude: it cannot be so large that it produces values greater than 1 when added to average  connectance. That might actually be a case for standardizing by the max relative abundance -- rather than the standard deviation -- because then the maximum value of alpha would just be $1-Co_f$, ie 1 minus the left-hand term above. It would have to be bounded between $-Co_f$ and $1-Co_f$. I think I could imagine adding the logistic to this relationship and letting it simplify.
+
+If you _don't_ subtract from the mean -- then what have you got? Now you're always adding something, which seems wrong. By definition some of these are below average. 
+
+
+
+```{r}
+abd <- rpois(15, rlnorm(15, 4, 3))
+relabd <- abd/sum(abd)
+mean_r <- mean(relabd)
+max_r <- max(relabd)
+cof <- 0.3
+
+cof * (1 - mean_r / max_r)
+
+cof* (mean_r / max_r - 1) ^ -1
+
+curve(1/(1 + exp(-x)), xlim = c(-3,3))
+
+q_t <- mean_r / max_r
+
+max_a <- cof * ((-q_t ^ 2)/(q_t -1) + 2)
+
+max_a* (q_t - 1)
+
+curve(1/(1 - q_t) * (1/(1 + exp(-x)) - 0.3), xlim = c(-3,3), ylim = c(-1,1))
+
+```
+
+We can use a logistic curve to constrain the values of $\alpha$, such that even for the most extremely common species interaction we do not get impossible values. 
+
+
+$$
+\frac{1}{1 - q_t} \times (\frac{1}{1 - e^{-\alpha}} - Co_f)
+$$
+
+Where $q_t$ is the mean relative abundance divided by the maximum relative abundance. 
+its worth noting that in perfectly even communities this would be 1, which would make most of these expressions undefined.. well its a good thing that is impossible in nature! 
+
+
+alpha in the equation above must be bounded between 
+
+$$ 
+\frac{-Co_f}{1-q_t}
+$$
+
+and
+
+$$
+\frac{1-Co_f}{1-q_t}
+$$
+
 
 ```{r}
 xx <- rpois(25, 6)#runif(25)
