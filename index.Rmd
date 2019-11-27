@@ -204,8 +204,9 @@ Here is the distribution of connectance for a small food web of 5 species.
 ```{r}
 m_s <- function(S) (S-1)/S^2
 
-p_5sp <- m_s(5) + 0.087 * (1 - m_s(5))
-phi_5sp <- (20.96 + m_s(5)) / (1 - m_s(5))
+
+p_5sp <- m_s(5) + p * (1 - m_s(5))
+phi_5sp <- (phi + m_s(5)) / (1 - m_s(5))
 
 p_curve(p, phi)
 p_curve(p_5sp, phi_5sp, add = TRUE, lwd = 3)
@@ -214,7 +215,7 @@ p_curve(p_5sp, phi_5sp, add = TRUE, lwd = 3)
 The bold line shows how the connectance of a food web is forced to increase when it is small. 
 
 
-```{r, eval=FALSE}
+```{r}
 
 forbids <- matrix(
   c(0,0,0,0,0,
@@ -228,7 +229,7 @@ forbids <- matrix(
 abds <- c(250, 170, 70, 35, 5)
 
 
-Co_forbid <- function(S, f, p = 0.1){
+Co_forbid <- function(S, f, p = p){
   (m_s(S) + p * (1 - m_s(S))) / (1 - f * (1 - m_s(S)))
 }
 
@@ -248,15 +249,15 @@ plot_simple_graph <- function(df) df %>%
   as_tbl_graph %>% 
   ggraph +
   # geom_edge_link(aes(alpha = pL)) +
-  geom_edge_fan(aes(alpha = pL), show.legend = FALSE) + 
-  geom_edge_loop(aes(alpha = pL)) + 
+  geom_edge_fan(aes(alpha = pL), show.legend = FALSE, edge_width = 2) + 
+  geom_edge_loop(aes(alpha = pL), edge_width = 2) + 
   geom_node_point() + 
   theme_void() + 
   scale_alpha_continuous(limits = c(0.01, 1))
 
 five_sp %>% 
   plot_simple_graph
-````
+```
 
 Here we have a kind of "flat" network: all the links have the same probability of occuring. 
 
@@ -270,7 +271,7 @@ possible_links_long <- forbids %>%
   pivot_longer(starts_with("sp"), names_to = "to") %>% 
   filter(value>0)
 
-new_pL <- Co_forbid(S = 5, f = sum(forbids==0) / (5^2 - (5 - 1)), p = 0.1)
+new_pL <- Co_forbid(S = 5, f = sum(forbids==0) / (5^2 - (5 - 1)), p = p)
 
 five_sp_forbid <- five_sp %>% 
   semi_join(possible_links_long) %>% 
@@ -288,24 +289,73 @@ This is because the predators have to eat _something_.
 And when there is a lot they can't eat, that removes a lot of uncertainty about who does the most eating. 
 
 
-```{r eval=FALSE}
+```{r}
 # now include abundance information
 
 
 five_sp_abds <- five_sp_forbid %>% 
-  mutate(abds = abds[to])
+  mutate(abds_to = abds[to],
+         abds_frm = abds[from])
 
-five_sp_abd_graph <- five_sp_abds %>% 
+five_sp_abds
+
+## calculate the relative abundance of a predator's prey
+five_sp_r <- five_sp_abds %>% 
   group_by(from) %>% 
-  mutate(mean_abd = mean(abds),
-         sum_abd = sum(abds),
-         pL = pL * (1 + (abds- mean_abd)/sum_abd))
+  mutate(r_to = abds_to / sum(abds_to)) %>% 
+  group_by(to) %>% 
+  mutate(r_from = abds_frm / sum(abds_frm)) %>% 
+  ungroup
 
-five_sp_abd_graph %>% 
-  plot_simple_graph() + 
-  geom_node_point(aes(size = sqrt(abds)))
+five_sp_q <- five_sp_r %>% 
+  mutate(q = r_to * r_from)
 
-# derive connectance from p
+sum(five_sp_q$q)
+```
+
+Now we have a quantity that does _not_ sum to one. It can be thought of as the "relative abundance of interactions". 
+
+WE want to spread out the connectivity across all these species. We need some scaling constant to do the work, but we don't know the value right away. 
+However, we do know that it can't be extreme: if it is too large, probabilities will exceed 1. 
+If it is too negative, it could give probabilities below 0.
+
+First, we rescale $q_{ij}$ by the maximum. We also calculate $q_t$, the "typical q", which is the average $q$ divided by the maximum.
+
+
+```{r}
+
+q_t <- with(five_sp_q, mean(q)/max(q))
+
+five_sp_qm <- five_sp_q %>% 
+  mutate(qm = q/max(q))
+five_sp_qm
+```
+
+Then we find the function that gives us the safe bounds on the proportionality constant $\alpha$ .
+For this we need the value of $Co_f$, or the connectance after forbidden links are included. 
+
+```{r}
+
+a <- function(g) (1 - q_t)^-1 * ((1 + exp(-g)) ^ -1 - new_pL)
+
+curve(a(x), xlim = c(-4, 5), ylim = c(-.7, 1))
+
+five_sp_abd_pl <- five_sp_qm %>% 
+  mutate(pL = qm * a(0.5) + pL)
+
+five_sp %>% 
+  bind_rows(five_sp_forbid, .id = "p") %>% 
+  bind_rows(five_sp_abd_pl, .id = "p") %>% 
+  plot_simple_graph + 
+  facet_wrap(~p)
+
+```
+
+
+
+```{r}
+
+five_sp_abd_pl$pL %>% sum
 
 co = m_s(5) + 0.1*(1-m_s(5))
 
@@ -318,7 +368,7 @@ sum(five_sp$pL)
 five_sp_forbid$pL %>% sum
 
 ## likewise with abundance information, it is the same number: 
-sum(five_sp_abd_graph$pL)
+# sum(five_sp_abd_graph$pL)
 
 
 
@@ -337,30 +387,16 @@ could_happens <- (ra %o% ra) * forbids
 sum(could_happens == 0 )
 sum(forbids == 0)
 
-#' so there would need to be a step like this every time we create posterior predictions for the community, based on their abudncaesc. 
-#' 
+#' so there would need to be a step like this every time we create posterior predictions for the community, based on their abudncaesc.
+#'
 #' 1. we predict abundances
-#' 
+#'
 #' 2. we combine this with forbidden links to get the number of links that *could* happen
-#' 
+#'
 #' 3. we carry on, spreading probability out over all the links in proportion to their abundances (or not).
 ```
 
 Based on a conversation with Tim, I now think it makes sense to use information on the predator abundances as well to make these spread-out connections. how exactly. 
-
-what's the average of a simplex
-
-```{r}
-
-n <- 20
-ns <- round(exp(rnorm(n,2)))
-
-sim_n <- ns/sum(ns)
-
-1/n
-mean(sim_n)
-
-```
 
 
 

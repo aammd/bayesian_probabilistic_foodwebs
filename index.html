@@ -49,7 +49,7 @@
   <!--/radix_placeholder_rmarkdown_metadata-->
   
   <script type="text/json" id="radix-resource-manifest">
-  {"type":"character","attributes":{},"value":["index_files/bowser-1.9.3/bowser.min.js","index_files/distill-2.2.21/template.v2.js","index_files/figure-html5/unnamed-chunk-2-1.png","index_files/figure-html5/unnamed-chunk-2-2.png","index_files/figure-html5/unnamed-chunk-4-1.png","index_files/figure-html5/unnamed-chunk-4-2.png","index_files/jquery-1.11.3/jquery.min.js","index_files/webcomponents-2.0.0/webcomponents.js"]}
+  {"type":"character","attributes":{},"value":["index_files/bowser-1.9.3/bowser.min.js","index_files/distill-2.2.21/template.v2.js","index_files/figure-html5/unnamed-chunk-10-1.png","index_files/figure-html5/unnamed-chunk-10-2.png","index_files/figure-html5/unnamed-chunk-2-1.png","index_files/figure-html5/unnamed-chunk-2-2.png","index_files/figure-html5/unnamed-chunk-4-1.png","index_files/figure-html5/unnamed-chunk-4-2.png","index_files/figure-html5/unnamed-chunk-5-1.png","index_files/figure-html5/unnamed-chunk-6-1.png","index_files/figure-html5/unnamed-chunk-7-1.png","index_files/jquery-1.11.3/jquery.min.js","index_files/webcomponents-2.0.0/webcomponents.js"]}
   </script>
   <!--radix_placeholder_navigation_in_header-->
   <!--/radix_placeholder_navigation_in_header-->
@@ -1019,11 +1019,11 @@ cof &lt;- 0.3
 
 cof * (1 - mean_r / max_r)</code></pre>
 <pre><code>
-[1] 0.2790253</code></pre>
+[1] 0.2743686</code></pre>
 <pre class="r"><code>
 cof* (mean_r / max_r - 1) ^ -1</code></pre>
 <pre><code>
-[1] -0.3225514</code></pre>
+[1] -0.3280259</code></pre>
 <pre class="r"><code>
 curve(1/(1 + exp(-x)), xlim = c(-3,3))</code></pre>
 <p><img src="index_files/figure-html5/unnamed-chunk-2-1.png" width="624" /></p>
@@ -1034,7 +1034,7 @@ max_a &lt;- cof * ((-q_t ^ 2)/(q_t -1) + 2)
 
 max_a* (q_t - 1)</code></pre>
 <pre><code>
-[1] -0.559517</code></pre>
+[1] -0.550927</code></pre>
 <pre class="r"><code>
 curve(1/(1 - q_t) * (1/(1 + exp(-x)) - 0.3), xlim = c(-3,3), ylim = c(-1,1))</code></pre>
 <p><img src="index_files/figure-html5/unnamed-chunk-2-2.png" width="624" /></p>
@@ -1057,11 +1057,11 @@ curve(1/(1 - q_t) * (1/(1 + exp(-x)) - 0.3), xlim = c(-3,3), ylim = c(-1,1))</co
 xx &lt;- rpois(25, 6)#runif(25)
 sum(xx)</code></pre>
 <pre><code>
-[1] 140</code></pre>
+[1] 151</code></pre>
 <pre class="r"><code>
 sum(xx - mean(xx))</code></pre>
 <pre><code>
-[1] 8.881784e-15</code></pre>
+[1] -8.881784e-16</code></pre>
 </div>
 <p>First, in order to calculate the connectance of a food web, we need to know the species richness. This will let us calculate the expected connectance of the food web. Specifically, it gives us information about the minimum proportion of interactions which are necessary (<span class="math inline">\(m(S)\)</span>).</p>
 <h2 id="worked-example">Worked example</h2>
@@ -1071,9 +1071,18 @@ curve(dbeta(x, 1.82, 19.14))</code></pre>
 <p><img src="index_files/figure-html5/unnamed-chunk-4-1.png" width="624" /></p>
 <pre class="r"><code>
 # alternatively
-curve(dbeta(x, 0.087 * 20.96, (1 - 0.087) * 20.96),
+
+p &lt;- 1.82/(19.14 + 1.82)
+
+phi &lt;- 19.14 + 1.82
+
+p_curve &lt;- function(mean, phi, ...){
+  curve(dbeta(x, mean * phi, (1 - mean) * phi),
       xlab = &quot;Probability of a &#39;flexible link&#39;&quot;,
-      ylab = &quot;Density&quot;)</code></pre>
+      ylab = &quot;Density&quot;, ...)
+}
+
+p_curve(p, phi)</code></pre>
 <p><img src="index_files/figure-html5/unnamed-chunk-4-2.png" width="624" /></p>
 </div>
 <p>This is based on an in-progress manuscript which can be read <a href="https://github.com/PoisotLab/ms_straight_lines">here</a>. In short this gives us the average proportion of “flexible” links in a food web which are realized. These “flexible” links are those above the minimum number, which is <span class="math inline">\(S-1\)</span>.</p>
@@ -1081,6 +1090,21 @@ curve(dbeta(x, 0.087 * 20.96, (1 - 0.087) * 20.96),
 <p>A probability distribution of connectance can be derived directly from the distribution above.</p>
 <p>This relationship is given by:</p>
 <p><span class="math display">\[ p_{Co} = (1 - m(S)) \times p + m(S)\, ,\]</span> {#eq:pco} <span class="math display">\[ \phi_{Co} = \frac{\phi + m(S)}{1 - m(S)}\, .\]</span> {#eq:phico}</p>
+<p>For large communities, <span class="math inline">\(m(S)\)</span> approaches 0 and so the distribution of connectance is exactly that shown above. for smaller communities, the minimum constraint becomes very important.</p>
+<p>Here is the distribution of connectance for a small food web of 5 species.</p>
+<div class="layout-chunk" data-layout="l-body">
+<pre class="r"><code>
+m_s &lt;- function(S) (S-1)/S^2
+
+
+p_5sp &lt;- m_s(5) + p * (1 - m_s(5))
+phi_5sp &lt;- (phi + m_s(5)) / (1 - m_s(5))
+
+p_curve(p, phi)
+p_curve(p_5sp, phi_5sp, add = TRUE, lwd = 3)</code></pre>
+<p><img src="index_files/figure-html5/unnamed-chunk-5-1.png" width="624" /></p>
+</div>
+<p>The bold line shows how the connectance of a food web is forced to increase when it is small.</p>
 <div class="layout-chunk" data-layout="l-body">
 <pre class="r"><code>
 forbids &lt;- matrix(
@@ -1094,9 +1118,8 @@ forbids &lt;- matrix(
 
 abds &lt;- c(250, 170, 70, 35, 5)
 
-m_s &lt;- function(S) (S-1)/S^2
 
-Co_forbid &lt;- function(S, f, p = 0.1){
+Co_forbid &lt;- function(S, f, p = p){
   (m_s(S) + p * (1 - m_s(S))) / (1 - f * (1 - m_s(S)))
 }
 
@@ -1116,15 +1139,19 @@ plot_simple_graph &lt;- function(df) df %&gt;%
   as_tbl_graph %&gt;% 
   ggraph +
   # geom_edge_link(aes(alpha = pL)) +
-  geom_edge_fan(aes(alpha = pL), show.legend = FALSE) + 
-  geom_edge_loop(aes(alpha = pL)) + 
+  geom_edge_fan(aes(alpha = pL), show.legend = FALSE, edge_width = 2) + 
+  geom_edge_loop(aes(alpha = pL), edge_width = 2) + 
   geom_node_point() + 
   theme_void() + 
   scale_alpha_continuous(limits = c(0.01, 1))
 
 five_sp %&gt;% 
-  plot_simple_graph
-
+  plot_simple_graph</code></pre>
+<p><img src="index_files/figure-html5/unnamed-chunk-6-1.png" width="624" /></p>
+</div>
+<p>Here we have a kind of “flat” network: all the links have the same probability of occuring.</p>
+<div class="layout-chunk" data-layout="l-body">
+<pre class="r"><code>
 # remove forbidden links
 dimnames(forbids) &lt;- list(spnames, spnames)
 
@@ -1134,49 +1161,131 @@ possible_links_long &lt;- forbids %&gt;%
   pivot_longer(starts_with(&quot;sp&quot;), names_to = &quot;to&quot;) %&gt;% 
   filter(value&gt;0)
 
-new_pL &lt;- Co_forbid(S = 5, f = sum(forbids==0) / (5^2 - (5 - 1)), p = 0.1)
+new_pL &lt;- Co_forbid(S = 5, f = sum(forbids==0) / (5^2 - (5 - 1)), p = p)
 
 five_sp_forbid &lt;- five_sp %&gt;% 
   semi_join(possible_links_long) %&gt;% 
   mutate(pL = new_pL)
 
-five_sp_forbid %&gt;% 
-  bind_rows(five_sp, .id = &quot;p&quot;) %&gt;% 
+five_sp %&gt;% 
+  bind_rows(five_sp_forbid, .id = &quot;p&quot;) %&gt;% 
   plot_simple_graph + 
   facet_wrap(~p)</code></pre>
+<p><img src="index_files/figure-html5/unnamed-chunk-7-1.png" width="624" /></p>
 </div>
+<p>Here we compare two networks with no forbidden links and with many forbidden links. As links are forbidden, the remaining links have to get stronger. This is because the predators have to eat <em>something</em>. And when there is a lot they can’t eat, that removes a lot of uncertainty about who does the most eating.</p>
 <div class="layout-chunk" data-layout="l-body">
 <pre class="r"><code>
 # now include abundance information
 
 
 five_sp_abds &lt;- five_sp_forbid %&gt;% 
-  mutate(abds = abds[to])
+  mutate(abds_to = abds[to],
+         abds_frm = abds[from])
 
-five_sp_abd_graph &lt;- five_sp_abds %&gt;% 
+five_sp_abds</code></pre>
+<pre><code>
+# A tibble: 12 x 5
+   from  to       pL abds_to abds_frm
+   &lt;chr&gt; &lt;chr&gt; &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;
+ 1 sp2   sp1   0.485     250      170
+ 2 sp2   sp2   0.485     170      170
+ 3 sp3   sp1   0.485     250       70
+ 4 sp3   sp2   0.485     170       70
+ 5 sp3   sp3   0.485      70       70
+ 6 sp4   sp2   0.485     170       35
+ 7 sp4   sp3   0.485      70       35
+ 8 sp4   sp4   0.485      35       35
+ 9 sp5   sp2   0.485     170        5
+10 sp5   sp3   0.485      70        5
+11 sp5   sp4   0.485      35        5
+12 sp5   sp5   0.485       5        5</code></pre>
+<pre class="r"><code>
+## calculate the relative abundance of a predator&#39;s prey
+five_sp_r &lt;- five_sp_abds %&gt;% 
   group_by(from) %&gt;% 
-  mutate(mean_abd = mean(abds),
-         sum_abd = sum(abds),
-         pL = pL * (1 + (abds- mean_abd)/sum_abd))
+  mutate(r_to = abds_to / sum(abds_to)) %&gt;% 
+  group_by(to) %&gt;% 
+  mutate(r_from = abds_frm / sum(abds_frm)) %&gt;% 
+  ungroup
 
-five_sp_abd_graph %&gt;% 
-  plot_simple_graph() + 
-  geom_node_point(aes(size = sqrt(abds)))
+five_sp_q &lt;- five_sp_r %&gt;% 
+  mutate(q = r_to * r_from)
 
-# derive connectance from p
+sum(five_sp_q$q)</code></pre>
+<pre><code>
+[1] 1.319144</code></pre>
+</div>
+<p>Now we have a quantity that does <em>not</em> sum to one. It can be thought of as the “relative abundance of interactions”.</p>
+<p>WE want to spread out the connectivity across all these species. We need some scaling constant to do the work, but we don’t know the value right away. However, we do know that it can’t be extreme: if it is too large, probabilities will exceed 1. If it is too negative, it could give probabilities below 0.</p>
+<p>First, we rescale <span class="math inline">\(q_{ij}\)</span> by the maximum. We also calculate <span class="math inline">\(q_t\)</span>, the “typical q”, which is the average <span class="math inline">\(q\)</span> divided by the maximum.</p>
+<div class="layout-chunk" data-layout="l-body">
+<pre class="r"><code>
+q_t &lt;- with(five_sp_q, mean(q)/max(q))
 
+five_sp_qm &lt;- five_sp_q %&gt;% 
+  mutate(qm = q/max(q))
+five_sp_qm</code></pre>
+<pre><code>
+# A tibble: 12 x 9
+   from  to       pL abds_to abds_frm   r_to r_from      q     qm
+   &lt;chr&gt; &lt;chr&gt; &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+ 1 sp2   sp1   0.485     250      170 0.595  0.708  0.422  1     
+ 2 sp2   sp2   0.485     170      170 0.405  0.607  0.246  0.583 
+ 3 sp3   sp1   0.485     250       70 0.510  0.292  0.149  0.353 
+ 4 sp3   sp2   0.485     170       70 0.347  0.25   0.0867 0.206 
+ 5 sp3   sp3   0.485      70       70 0.143  0.636  0.0909 0.216 
+ 6 sp4   sp2   0.485     170       35 0.618  0.125  0.0773 0.183 
+ 7 sp4   sp3   0.485      70       35 0.255  0.318  0.0810 0.192 
+ 8 sp4   sp4   0.485      35       35 0.127  0.875  0.111  0.264 
+ 9 sp5   sp2   0.485     170        5 0.607  0.0179 0.0108 0.0257
+10 sp5   sp3   0.485      70        5 0.25   0.0455 0.0114 0.0270
+11 sp5   sp4   0.485      35        5 0.125  0.125  0.0156 0.0371
+12 sp5   sp5   0.485       5        5 0.0179 1      0.0179 0.0424</code></pre>
+</div>
+<p>Then we find the function that gives us the safe bounds on the proportionality constant <span class="math inline">\(\alpha\)</span> . For this we need the value of <span class="math inline">\(Co_f\)</span>, or the connectance after forbidden links are included.</p>
+<div class="layout-chunk" data-layout="l-body">
+<pre class="r"><code>
+a &lt;- function(g) (1 - q_t)^-1 * ((1 + exp(-g)) ^ -1 - new_pL)
+
+curve(a(x), xlim = c(-4, 5), ylim = c(-.7, 1))</code></pre>
+<p><img src="index_files/figure-html5/unnamed-chunk-10-1.png" width="624" /></p>
+<pre class="r"><code>
+five_sp_abd_pl &lt;- five_sp_qm %&gt;% 
+  mutate(pL = qm * a(0.5) + pL)
+
+five_sp %&gt;% 
+  bind_rows(five_sp_forbid, .id = &quot;p&quot;) %&gt;% 
+  bind_rows(five_sp_abd_pl, .id = &quot;p&quot;) %&gt;% 
+  plot_simple_graph + 
+  facet_wrap(~p)</code></pre>
+<p><img src="index_files/figure-html5/unnamed-chunk-10-2.png" width="624" /></p>
+</div>
+<div class="layout-chunk" data-layout="l-body">
+<pre class="r"><code>
+five_sp_abd_pl$pL %&gt;% sum</code></pre>
+<pre><code>
+[1] 6.403993</code></pre>
+<pre class="r"><code>
 co = m_s(5) + 0.1*(1-m_s(5))
 
 # expected number of links
-co * 5^2
+co * 5^2</code></pre>
+<pre><code>
+[1] 6.1</code></pre>
+<pre class="r"><code>
 # or just sum up all probabilites of links:
-sum(five_sp$pL)
-
+sum(five_sp$pL)</code></pre>
+<pre><code>
+[1] 6.1</code></pre>
+<pre class="r"><code>
 ## among forbidden links, the sum of all link probabilities is the same number:
-five_sp_forbid$pL %&gt;% sum
-
+five_sp_forbid$pL %&gt;% sum</code></pre>
+<pre><code>
+[1] 5.823473</code></pre>
+<pre class="r"><code>
 ## likewise with abundance information, it is the same number: 
-sum(five_sp_abd_graph$pL)
+# sum(five_sp_abd_graph$pL)
 
 
 
@@ -1192,34 +1301,23 @@ ra &lt;- abds_missing / sum(abds_missing)
 
 could_happens &lt;- (ra %o% ra) * forbids
 
-sum(could_happens == 0 )
-sum(forbids == 0)
-
-#&#39; so there would need to be a step like this every time we create posterior predictions for the community, based on their abudncaesc. 
-#&#39; 
+sum(could_happens == 0 )</code></pre>
+<pre><code>
+[1] 17</code></pre>
+<pre class="r"><code>
+sum(forbids == 0)</code></pre>
+<pre><code>
+[1] 13</code></pre>
+<pre class="r"><code>
+#&#39; so there would need to be a step like this every time we create posterior predictions for the community, based on their abudncaesc.
+#&#39;
 #&#39; 1. we predict abundances
-#&#39; 
+#&#39;
 #&#39; 2. we combine this with forbidden links to get the number of links that *could* happen
-#&#39; 
+#&#39;
 #&#39; 3. we carry on, spreading probability out over all the links in proportion to their abundances (or not).</code></pre>
 </div>
 <p>Based on a conversation with Tim, I now think it makes sense to use information on the predator abundances as well to make these spread-out connections. how exactly.</p>
-<p>what’s the average of a simplex</p>
-<div class="layout-chunk" data-layout="l-body">
-<pre class="r"><code>
-n &lt;- 20
-ns &lt;- round(exp(rnorm(n,2)))
-
-sim_n &lt;- ns/sum(ns)
-
-1/n</code></pre>
-<pre><code>
-[1] 0.05</code></pre>
-<pre class="r"><code>
-mean(sim_n)</code></pre>
-<pre><code>
-[1] 0.05</code></pre>
-</div>
 <!--radix_placeholder_article_footer-->
 <!--/radix_placeholder_article_footer-->
 </div>
