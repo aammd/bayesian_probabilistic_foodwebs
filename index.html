@@ -953,7 +953,7 @@
 
 <div class="d-title">
 <h1>Bayesian approaches to building probabilistic networks</h1>
-<p>An extension of some existing approaches in network ecology.</p>
+<p><p>An extension of some existing approaches in network ecology.</p></p>
 </div>
 
 <div class="d-byline">
@@ -979,8 +979,41 @@
 <p>The approach suggested by Cirtwell et al. is based on <em>conjugate priors</em>. Conjugate priors are a convenient bayesian trick: when the prior is defined as a specific distribution, there is sometimes a likelihood which in turn gives</p>
 <div class="layout-chunk" data-layout="l-body">
 <pre class="r"><code>
-library(tidyverse)</code></pre>
+library(tidyverse)
+library(ggraph)
+library(tidygraph)</code></pre>
 </div>
+<p><span class="math display">\[
+\begin{align}
+P(L_{i \rightarrow j}) &amp;= \frac{m(S) + p \times (1 - m(S))}{1 - f \times (1 - m(S))} + \alpha \times \frac{(\bar{q} - q_{ij})}{\sigma_{q}} \\
+m(S) &amp;= \frac{S - 1}{S^2} \\
+f &amp;= \frac{F}{S^2 - (S - 1)}
+\end{align}
+\]</span></p>
+<p>I decided to write <span class="math inline">\(m(S)\)</span> as a function of <span class="math inline">\(S\)</span> because it is the same for all communities with the same richness. on the other hand, <span class="math inline">\(F\)</span> will be different for every single community, even if their species richnesses are the same, because every community will have a different number of forbidden links.</p>
+<p>Where the following values come directly from the data itself</p>
+<ul>
+<li><span class="math inline">\(F\)</span> is the number of links which are forbidden in the food web</li>
+<li><span class="math inline">\(S\)</span> is the number of species present</li>
+<li><span class="math inline">\(q_{ij}\)</span> is the relative abundance of an interaction: it is the product of the relative abundances of both species in an interaction.</li>
+</ul>
+<p><span class="math inline">\(q_{ij}\)</span> do <em>not</em> sum to one, because these are the products of relative abundances of species which might interact – they do not include forbidden links. For example if a predator is a carnivore and cannot digest plant matter, no plants are included in the possible resources for this species.</p>
+<p>On the other hand, if no links are forbidden, and all species might interact, then <span class="math inline">\(q_{ij}\)</span> is the outer product of the vector of relative abundances and itself, and therefore it has to sum to 1.</p>
+<p>The term on the left in the equation above gives the average connectance of a link in the food web. The term on the right adjusts this average up or down, given the relative abundance of that interaction.</p>
+<p>It might make sense to standardize this value, to make the value of <span class="math inline">\(\alpha\)</span> more intuitive and easier to compare across datasets. After all the actual difference from the mean could matter less than how unusual the frequency of two species encountering each other is. So the parameter <span class="math inline">\(\alpha\)</span> means “what is the effect of being one standard deviation more frequent than the average interaction”. This value is probably positive, as more frequent interactions might be the most likely to end in violence. An eco-evolutionary interpretation of this is that organisms adapt to eat those species they frequently encounter. Alternatively, this relationship might even be negative. In such a case, we might imagine that more common species are common precisely <em>because</em> they do not interact with the predator – i.e. they dont’ get killed as often. We might set a different (and /or rather wide) prior on this value and marginalize our results over it. One possible value might be <span class="math inline">\(N(1,1)\)</span></p>
+<p><em>parameters</em> <span class="math inline">\(\alpha\)</span> needs to be guessed at. <span class="math inline">\(p\)</span> can be the posterior distribution from the straight lines paper.</p>
+<div class="layout-chunk" data-layout="l-body">
+<pre class="r"><code>
+xx &lt;- rpois(25, 6)#runif(25)
+sum(xx)</code></pre>
+<pre><code>
+[1] 148</code></pre>
+<pre class="r"><code>
+sum(xx - mean(xx))</code></pre>
+<pre><code>
+[1] 1.776357e-15</code></pre>
+</div>
+<p>First, in order to calculate the connectance of a food web, we need to know the species richness. This will let us calculate the expected connectance of the food web. Specifically, it gives us information about the minimum proportion of interactions which are necessary (<span class="math inline">\(m(S)\)</span>).</p>
 <div class="layout-chunk" data-layout="l-body">
 <pre class="r"><code>
 forbids &lt;- matrix(
@@ -1013,10 +1046,11 @@ five_sp &lt;- expand_grid(from = spnames,
 
 
 plot_simple_graph &lt;- function(df) df %&gt;% 
-  graph_from_data_frame %&gt;% 
+  as_tbl_graph %&gt;% 
   ggraph +
   # geom_edge_link(aes(alpha = pL)) +
   geom_edge_fan(aes(alpha = pL), show.legend = FALSE) + 
+  geom_edge_loop(aes(alpha = pL)) + 
   geom_node_point() + 
   theme_void() + 
   scale_alpha_continuous(limits = c(0.01, 1))
@@ -1102,6 +1136,7 @@ sum(forbids == 0)
 #&#39; 
 #&#39; 3. we carry on, spreading probability out over all the links in proportion to their abundances (or not).</code></pre>
 </div>
+<p>Based on a conversation with Tim, I now think it makes sense to use information on the predator abundances as well to make these spread-out connections. how exactly.</p>
 <!--radix_placeholder_article_footer-->
 <!--/radix_placeholder_article_footer-->
 </div>
@@ -1109,6 +1144,15 @@ sum(forbids == 0)
 <div class="d-appendix">
 </div>
 
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
 
 <!--radix_placeholder_site_after_body-->
 <!--/radix_placeholder_site_after_body-->

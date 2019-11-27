@@ -7,7 +7,7 @@ author:
     url: 
     affiliation: U de Montreal, CESAB
     affiliation_url: 
-date: "`r Sys.Date()`"
+date: '`r Sys.Date()`'
 output:
   distill::distill_article:
     self_contained: false
@@ -61,7 +61,49 @@ library(ggraph)
 library(tidygraph)
 ```
 
+ 
 
+$$
+\begin{align}
+P(L_{i \rightarrow j}) &= \frac{m(S) + p \times (1 - m(S))}{1 - f \times (1 - m(S))} + \alpha \times \frac{(\bar{q} - q_{ij})}{\sigma_{q}} \\
+m(S) &= \frac{S - 1}{S^2} \\
+f &= \frac{F}{S^2 - (S - 1)}
+\end{align}
+$$
+
+I decided to write $m(S)$ as a function of $S$ because it is the same for all communities with the same richness. on the other hand, $F$ will be different for every single community, even if their species richnesses are the same, because every community will have a different number of forbidden links. 
+
+Where the following values come directly from the data itself
+
+* $F$ is the number of links which are forbidden in the food web
+* $S$ is the number of species present
+* $q_{ij}$ is the relative abundance of an interaction: it is the product of the relative abundances of both species in an interaction.
+
+$q_{ij}$ do _not_ sum to one, because these are the products of relative abundances of species which might interact -- they do not include forbidden links. For example if a predator is a carnivore and cannot digest plant matter, no plants are included in the possible resources for this species.
+
+On the other hand, if no links are forbidden, and all species might interact, then $q_{ij}$ is the outer product of the vector of relative abundances and itself, and therefore it has to sum to 1. 
+
+The term on the left in the equation above gives the average connectance of a link in the food web. 
+The term on the right adjusts this average up or down, given the relative abundance of that interaction. 
+
+It might make sense to standardize this value, to make the value of $\alpha$ more intuitive and easier to compare across datasets. After all the actual difference from the mean could matter less than how unusual the frequency of two species encountering each other is. 
+So the parameter $\alpha$ means "what is the effect of being one standard deviation more frequent than the average interaction". 
+This value is probably positive, as more frequent interactions might be the most likely to end in violence. 
+An eco-evolutionary interpretation of this is that organisms adapt to eat those species they frequently encounter. 
+Alternatively, this relationship might even be negative. In such a case, we might imagine that more common species are common precisely _because_ they do not interact with the predator -- i.e. they dont' get killed as often. We might set a different (and /or rather wide) prior on this value and marginalize our results over it. 
+One possible value might be $N(1,1)$
+
+*parameters* $\alpha$ needs to be guessed at. $p$ can be the posterior distribution from the straight lines paper.
+
+```{r}
+xx <- rpois(25, 6)#runif(25)
+sum(xx)
+sum(xx - mean(xx))
+```
+
+
+First, in order to calculate the connectance of a food web, we need to know the species richness. 
+This will let us calculate the expected connectance of the food web. Specifically, it gives us information about the minimum proportion of interactions which are necessary ($m(S)$). 
 
 ```{r, eval=FALSE}
 
@@ -188,5 +230,7 @@ sum(forbids == 0)
 ```
 
 Based on a conversation with Tim, I now think it makes sense to use information on the predator abundances as well to make these spread-out connections. how exactly. 
+
+
 
 
