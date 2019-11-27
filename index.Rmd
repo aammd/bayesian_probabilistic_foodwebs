@@ -166,6 +166,54 @@ This will let us calculate the expected connectance of the food web. Specificall
 
 ## Worked example 
 
+```{r}
+curve(dbeta(x, 1.82, 19.14))
+# alternatively
+
+p <- 1.82/(19.14 + 1.82)
+
+phi <- 19.14 + 1.82
+
+p_curve <- function(mean, phi, ...){
+  curve(dbeta(x, mean * phi, (1 - mean) * phi),
+      xlab = "Probability of a 'flexible link'",
+      ylab = "Density", ...)
+}
+
+p_curve(p, phi)
+
+
+```
+
+This is based on an in-progress manuscript which can be read [here](https://github.com/PoisotLab/ms_straight_lines). In short this gives us the average proportion of "flexible" links in a food web which are realized. These "flexible" links are those above the minimum number, which is $S-1$. 
+
+Connectance is a key characteristic of any food web. It is the proportion of all possible links which are actually occupied in a food web: $L/S^2$, where $L$ is the number of observed links and $S^2$ is the squared number of species. 
+
+A probability distribution of connectance can be derived directly from the distribution above. 
+
+This relationship is given by:
+
+$$ p_{Co} = (1 - m(S)) \times p + m(S)\, ,$$ {#eq:pco}
+$$ \phi_{Co} = \frac{\phi + m(S)}{1 - m(S)}\, .$$ {#eq:phico}
+
+For large communities, $m(S)$ approaches 0 and so the distribution of connectance is exactly that shown above.
+for smaller communities, the minimum constraint becomes very important. 
+
+Here is the distribution of connectance for a small food web of 5 species.
+
+```{r}
+m_s <- function(S) (S-1)/S^2
+
+p_5sp <- m_s(5) + 0.087 * (1 - m_s(5))
+phi_5sp <- (20.96 + m_s(5)) / (1 - m_s(5))
+
+p_curve(p, phi)
+p_curve(p_5sp, phi_5sp, add = TRUE, lwd = 3)
+```
+
+The bold line shows how the connectance of a food web is forced to increase when it is small. 
+
+
 ```{r, eval=FALSE}
 
 forbids <- matrix(
@@ -179,7 +227,6 @@ forbids <- matrix(
 
 abds <- c(250, 170, 70, 35, 5)
 
-m_s <- function(S) (S-1)/S^2
 
 Co_forbid <- function(S, f, p = 0.1){
   (m_s(S) + p * (1 - m_s(S))) / (1 - f * (1 - m_s(S)))
@@ -209,7 +256,11 @@ plot_simple_graph <- function(df) df %>%
 
 five_sp %>% 
   plot_simple_graph
+````
 
+Here we have a kind of "flat" network: all the links have the same probability of occuring. 
+
+```{r}
 # remove forbidden links
 dimnames(forbids) <- list(spnames, spnames)
 
@@ -225,14 +276,20 @@ five_sp_forbid <- five_sp %>%
   semi_join(possible_links_long) %>% 
   mutate(pL = new_pL)
 
-five_sp_forbid %>% 
-  plot_simple_graph
+five_sp %>% 
+  bind_rows(five_sp_forbid, .id = "p") %>% 
+  plot_simple_graph + 
+  facet_wrap(~p)
+```
 
-# note this appears lighter because there is no "back" links
+Here we compare two networks with no forbidden links and with many forbidden links. 
+As links are forbidden, the remaining links have to get stronger.
+This is because the predators have to eat _something_. 
+And when there is a lot they can't eat, that removes a lot of uncertainty about who does the most eating. 
 
+
+```{r eval=FALSE}
 # now include abundance information
-
-## again, I have no idea if I am doing this right -- is an adjacenty matrix _from_ predators _to_ prey
 
 
 five_sp_abds <- five_sp_forbid %>% 
